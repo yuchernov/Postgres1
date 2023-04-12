@@ -56,8 +56,7 @@ sudo docker run -it --rm --network pg-net --name pg-client postgres:15 psql -h p
 \c postgres
 select * from test;
 
- i | amount
----+--------
- 1 |    100
- 2 |    500
-(2 rows)
+| i | amount |
+|---|--------|
+| 1 | 100    |
+| 2 | 500    |
