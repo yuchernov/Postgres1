@@ -1,76 +1,114 @@
-## создать ВМ с Ubuntu 20.04/22.04 или развернуть докер любым удобным способом ##
-
-Использую ВМ с предыдущего ДЗ. Yandex Cloud Ubuntu 20.04
-
-## поставить на нем Docker Engine ##
+##    создайте виртуальную машину c Ubuntu 20.04/22.04 LTS в GCE/ЯО/Virtual Box/докере
+	
+##    поставьте на нее PostgreSQL 15 через sudo apt
 ```
-curl -fsSL https://get.docker.com -o get-docker.sh && sudo sh get-docker.sh && rm get-docker.sh && sudo usermod -aG docker $USER
+sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
 ```
-## сделать каталог /var/lib/postgres
-```
-sudo mkdir /var/lib/postgres
-```
-## развернуть контейнер с PostgreSQL 15 смонтировав в него /var/lib/postgresql
-```
-sudo docker network create pg-net	
-sudo docker run --name pg-server --network pg-net -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 -v /var/lib/postgres:/var/lib/postgresql/data postgres:15
+##    проверьте что кластер запущен через sudo -u postgres pg_lsclusters
 ```	
-## развернуть контейнер с клиентом postgres
-```
-sudo docker run -it --rm --network pg-net --name pg-client postgres:15 psql -h pg-server -U postgres
-```
-## подключится из контейнера с клиентом к контейнеру с сервером и сделать таблицу с парой строк
-```
-postgres=# \c postgres
-postgres=# CREATE TABLE test (i serial, amount int);
-postgres=# INSERT INTO test(amount) VALUES (100);
-postgres=# INSERT INTO test(amount) VALUES (500);
-```
-## подключится к контейнеру с сервером с ноутбука/компьютера извне инстансов GCP/ЯО/места установки докера
-```
-psql -p 5432 -U postgres -h 51.250.66.20 -d postgres -W	
-```
-Подключение удалось
-```
-C:\Program Files\PostgreSQL\15\bin>psql -p 5432 -U postgres -h 51.250.66.20 -d postgres -W
-Пароль:
-psql (15.2)
-ПРЕДУПРЕЖДЕНИЕ: Кодовая страница консоли (866) отличается от основной
-                страницы Windows (1251).
-                8-битовые (русские) символы могут отображаться некорректно.
-                Подробнее об этом смотрите документацию psql, раздел
-                "Notes for Windows users".
-Введите "help", чтобы получить справку.
-```
-## удалить контейнер с сервером
-```
-sudo docker rm pg-server
-```
-Error response from daemon: You cannot remove a running container 629995c4f80662b5933d3d986e2f672584110a2e6c328caffa61ab1143085f49. Stop the container before attempting removal or force remove
-
-Остановим контейнер.
-```
-sudo docker stop pg-server
-```
-Удалим 
-```
-sudo docker rm pg-server
+15  main    5432 online postgres /var/lib/postgresql/15/main /var/log/postgresql/postgresql-15-main.log	
 ```	
-## создать его заново
+##    зайдите из под пользователя postgres в psql и сделайте произвольную таблицу с произвольным содержимым
+```	
+    postgres=# create table test(c1 text);
+    postgres=# insert into test values('1');
+    \q
+```	
+##    остановите postgres например через sudo -u postgres pg_ctlcluster 15 main stop
+
 ```
-sudo docker run --name pg-server --network pg-net -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 -v /var/lib/postgres:/var/lib/postgresql/data postgres:15
+sudo -u postgres pg_ctlcluster 15 main stop
+
+Warning: stopping the cluster using pg_ctlcluster will mark the systemd unit as failed. Consider using systemctl:
+  sudo systemctl stop postgresql@15-main
+
+15  main    5432 down   postgres /var/lib/postgresql/15/main /var/log/postgresql/postgresql-15-main.log
 ```
-## подключится снова из контейнера с клиентом к контейнеру с сервером
+	
+ ##   создайте новый диск к ВМ размером 10GB
+	
+ ##   добавьте свеже-созданный диск к виртуальной машине - надо зайти в режим ее редактирования и дальше выбрать пункт attach existing disk
+	
+##    проинициализируйте диск согласно инструкции и подмонтировать файловую систему, только не забывайте менять имя диска на актуальное, в вашем случае это скорее всего будет /dev/sdb - https://www.digitalocean.com/community/tutorials/how-to-partition-and-format-storage-devices-in-linux
 ```
-sudo docker run -it --rm --network pg-net --name pg-client postgres:15 psql -h pg-server -U postgres
+sudo parted /dev/vdb mklabel gpt
+sudo parted -a opt /dev/vdb mkpart primary ext4 0% 100%
+sudo mkfs.ext4 -L datapartition /dev/vdb1
+sudo mount -o defaults /dev/vdb1 /mnt/data
+sudo nano /etc/fstab
 ```
-## проверить, что данные остались на месте
+##    перезагрузите инстанс и убедитесь, что диск остается примонтированным (если не так смотрим в сторону fstab)
+```	
+df -h -x tmpfs
 ```
-\c postgres
-select * from test;
+##    сделайте пользователя postgres владельцем /mnt/data - chown -R postgres:postgres /mnt/data/
+```
+sudo chown -R postgres:postgres /mnt/data/	
+```	
+##    перенесите содержимое /var/lib/postgres/14 в /mnt/data - mv /var/lib/postgresql/15/ mnt/data
+```
+sudo mv /var/lib/postgresql/15/ /mnt/data	
+```	
+##    попытайтесь запустить кластер - sudo -u postgres pg_ctlcluster 15 main start
+```
+sudo -u postgres pg_ctlcluster 15 main start
+```	
+##    напишите получилось или нет и почему
+Получаем ошибку Error: /var/lib/postgresql/15/main is not accessible or does not exist
+Не получилось, поскольку мы переместили postgres в другой раздел, но конфиг файл не поправили.	
+	
+##    задание: найти конфигурационный параметр в файлах раположенных в /etc/postgresql/15/main который надо поменять и поменяйте его. Напишите что и почему поменяли
+```	
+data_directory = '/mnt/data/15/main'            # use data in another directory	
+```
+Поменяли каталог, содержащий файлы данных 15 постгреса, поскольку перенесли их ранее на раздел другого жесткого диска.
+	
+##    попытайтесь запустить кластер - sudo -u postgres pg_ctlcluster 15 main start. Напишите получилось или нет и почему
+	
+Все получилось, поскольку изменили конфигурационный файл.
+```
+15  main    5432 online postgres /mnt/data/15/main /var/log/postgresql/postgresql-15-main.log
+```
+##    зайдите через через psql и проверьте содержимое ранее созданной таблицы
+Данные на месте	
+```
+postgres=# select * from test;
+```
+| c1 |
+|----|
+| 1  |
+
+ ##   задание со звездочкой : не удаляя существующий инстанс ВМ сделайте новый, поставьте на его PostgreSQL, удалите файлы с данными из /var/lib/postgres, перемонтируйте внешний диск который сделали ранее от первой виртуальной машины ко второй и запустите PostgreSQL на второй машине так чтобы он работал с данными на внешнем диске, расскажите как вы это сделали и что в итоге получилось.
+```	
+sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
+sudo rm -r 15
+```
+Отсоединяем диск от первой машины в UI.
+Присоединяем ко второй машине в UI.
+
+Убедимся в его подключении
+```
+lsblk
 ```
 
-| i | amount |
-|---|--------|
-| 1 | 100    |
-| 2 | 500    |
+| NAME   | MAJ:MIN | RM | SIZE | RO | TYPE MOUNTPOINTS |
+|--------|---------|----|------|----|------------------|
+| vda    | 252:0   | 0  | 18G  | 0  | disk             |
+| ├─vda1 | 252:1   | 0  | 1M   | 0  | part             |
+| └─vda2 | 252:2   | 0  | 18G  | 0  | part             |
+| vdb    | 252:16  | 0  | 20G  | 0  | disk             |
+| └─vdb1 | 252:17  | 0  | 20G  | 0  | part             |
+
+Проинициализируем и затем смонтируем подключенный диск
+```
+sudo mkdir -p /mnt/data
+sudo mount -o defaults /dev/vdb1 /mnt/data
+```
+Далее изменяем конфиг файл постгреса 
+```
+data_directory = '/mnt/data/15/main'
+```
+Запускаем кластер
+```
+sudo -u postgres pg_ctlcluster 15 main start
+```
