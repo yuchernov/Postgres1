@@ -1,114 +1,150 @@
-##    создайте виртуальную машину c Ubuntu 20.04/22.04 LTS в GCE/ЯО/Virtual Box/докере
-	
-##    поставьте на нее PostgreSQL 15 через sudo apt
+## 1 создайте новый кластер PostgresSQL 14
 ```
-sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
+sudo apt update && sudo apt upgrade -y -q && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt -y install postgresql-14
 ```
-##    проверьте что кластер запущен через sudo -u postgres pg_lsclusters
-```	
-15  main    5432 online postgres /var/lib/postgresql/15/main /var/log/postgresql/postgresql-15-main.log	
-```	
-##    зайдите из под пользователя postgres в psql и сделайте произвольную таблицу с произвольным содержимым
-```	
-    postgres=# create table test(c1 text);
-    postgres=# insert into test values('1');
-    \q
-```	
-##    остановите postgres например через sudo -u postgres pg_ctlcluster 15 main stop
-
+## 2 зайдите в созданный кластер под пользователем postgres
 ```
-sudo -u postgres pg_ctlcluster 15 main stop
-
-Warning: stopping the cluster using pg_ctlcluster will mark the systemd unit as failed. Consider using systemctl:
-  sudo systemctl stop postgresql@15-main
-
-15  main    5432 down   postgres /var/lib/postgresql/15/main /var/log/postgresql/postgresql-15-main.log
+sudo -u postgres psql
 ```
-	
- ##   создайте новый диск к ВМ размером 10GB
-	
- ##   добавьте свеже-созданный диск к виртуальной машине - надо зайти в режим ее редактирования и дальше выбрать пункт attach existing disk
-	
-##    проинициализируйте диск согласно инструкции и подмонтировать файловую систему, только не забывайте менять имя диска на актуальное, в вашем случае это скорее всего будет /dev/sdb - https://www.digitalocean.com/community/tutorials/how-to-partition-and-format-storage-devices-in-linux
+## 3 создайте новую базу данных testdb
 ```
-sudo parted /dev/vdb mklabel gpt
-sudo parted -a opt /dev/vdb mkpart primary ext4 0% 100%
-sudo mkfs.ext4 -L datapartition /dev/vdb1
-sudo mount -o defaults /dev/vdb1 /mnt/data
-sudo nano /etc/fstab
+CREATE DATABASE testdb;
 ```
-##    перезагрузите инстанс и убедитесь, что диск остается примонтированным (если не так смотрим в сторону fstab)
-```	
-df -h -x tmpfs
+## 4 зайдите в созданную базу данных под пользователем postgres
 ```
-##    сделайте пользователя postgres владельцем /mnt/data - chown -R postgres:postgres /mnt/data/
+\c testdb
 ```
-sudo chown -R postgres:postgres /mnt/data/	
-```	
-##    перенесите содержимое /var/lib/postgres/14 в /mnt/data - mv /var/lib/postgresql/15/ mnt/data
+## 5 создайте новую схему testnm
 ```
-sudo mv /var/lib/postgresql/15/ /mnt/data	
-```	
-##    попытайтесь запустить кластер - sudo -u postgres pg_ctlcluster 15 main start
+create schema testnm;
 ```
-sudo -u postgres pg_ctlcluster 15 main start
-```	
-##    напишите получилось или нет и почему
-Получаем ошибку Error: /var/lib/postgresql/15/main is not accessible or does not exist
-Не получилось, поскольку мы переместили postgres в другой раздел, но конфиг файл не поправили.	
-	
-##    задание: найти конфигурационный параметр в файлах раположенных в /etc/postgresql/15/main который надо поменять и поменяйте его. Напишите что и почему поменяли
-```	
-data_directory = '/mnt/data/15/main'            # use data in another directory	
+## 6 создайте новую таблицу t1 с одной колонкой c1 типа integer
 ```
-Поменяли каталог, содержащий файлы данных 15 постгреса, поскольку перенесли их ранее на раздел другого жесткого диска.
-	
-##    попытайтесь запустить кластер - sudo -u postgres pg_ctlcluster 15 main start. Напишите получилось или нет и почему
-	
-Все получилось, поскольку изменили конфигурационный файл.
+CREATE TABLE testnm.t1 (c1 int);
 ```
-15  main    5432 online postgres /mnt/data/15/main /var/log/postgresql/postgresql-15-main.log
+## 7 вставьте строку со значением c1=1
 ```
-##    зайдите через через psql и проверьте содержимое ранее созданной таблицы
-Данные на месте	
+INSERT INTO testnm.t1(c1) VALUES (1);
 ```
-postgres=# select * from test;
+## 8 создайте новую роль readonly
+```
+CREATE ROLE readonly;
+```
+## 9 дайте новой роли право на подключение к базе данных testdb
+```
+GRANT CONNECT ON DATABASE testdb TO readonly;
+```
+## 10 дайте новой роли право на использование схемы testnm
+```
+GRANT USAGE ON SCHEMA testnm TO readonly;
+```
+## 11 дайте новой роли право на select для всех таблиц схемы testnm
+```
+GRANT SELECT ON ALL TABLES IN SCHEMA testnm TO readonly;
+```
+## 12 создайте пользователя testread с паролем test123
+```
+CREATE USER testread WITH PASSWORD 'test123';
+```
+## 13 дайте роль readonly пользователю testread
+```
+GRANT readonly TO testread;
+```
+## 14 зайдите под пользователем testread в базу данных testdb
+```
+\c testdb testread
+```
+## 15 сделайте select * from t1;
+```
+select * from testnm.t1;
+```
+## 16 получилось? (могло если вы делали сами не по шпаргалке и не упустили один существенный момент про который позже)
+```
+testdb=> select * from testnm.t1;
 ```
 | c1 |
 |----|
 | 1  |
+Все получилось. При создании таблицы была указана схеме. В запросе также схема указывается явно. Все работает
+## 17 напишите что именно произошло в тексте домашнего задания
+Все получилось.
+## 18 у вас есть идеи почему? ведь права то дали?
+Все получилось.
+## 19 посмотрите на список таблиц
+Все получилось.
+## 20 подсказка в шпаргалке под пунктом 20
+Все получилось.
+## 21 а почему так получилось с таблицей (если делали сами и без шпаргалки то может у вас все нормально)
+Все получилось.
+## 22 вернитесь в базу данных testdb под пользователем postgres
+## 23 удалите таблицу t1
+```
+drop table testnm.t1;
+```
+## 24 создайте ее заново но уже с явным указанием имени схемы testnm
+Сделал так ранее.
+## 25 вставьте строку со значением c1=1
+Сделал так ранее.
+## 26 зайдите под пользователем testread в базу данных testdb
+Сделал так ранее.
+## 27 сделайте select * from testnm.t1;
+Сделал так ранее.
+## 28 получилось?
+Сделал так ранее.
+## 29 есть идеи почему? если нет - смотрите шпаргалку
+Сделал так ранее.
+## 30 как сделать так чтобы такое больше не повторялось? если нет идей - смотрите шпаргалку
+Создать синоним на эту таблицу, например. 
+## 31 сделайте select * from testnm.t1;
+```
+select * from testnm.t1;
+```
+## 32 получилось?
+```
+ERROR:  permission denied for table t1
+```
+После пересоздания таблицы, слетели выданные ранее гранты к схеме. 
+Выдам повторно под postgres
+```
+GRANT SELECT ON ALL TABLES IN SCHEMA testnm TO readonly;
+```
+## сделайте select * from testnm.t1;
+## получилось?
 
- ##   задание со звездочкой : не удаляя существующий инстанс ВМ сделайте новый, поставьте на его PostgreSQL, удалите файлы с данными из /var/lib/postgres, перемонтируйте внешний диск который сделали ранее от первой виртуальной машины ко второй и запустите PostgreSQL на второй машине так чтобы он работал с данными на внешнем диске, расскажите как вы это сделали и что в итоге получилось.
-```	
-sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
-sudo rm -r 15
-```
-Отсоединяем диск от первой машины в UI.
-Присоединяем ко второй машине в UI.
+Да
+| c1 |
+|----|
+| 1  |
 
-Убедимся в его подключении
-```
-lsblk
-```
+## 33 ура!
 
-| NAME   | MAJ:MIN | RM | SIZE | RO | TYPE MOUNTPOINTS |
-|--------|---------|----|------|----|------------------|
-| vda    | 252:0   | 0  | 18G  | 0  | disk             |
-| ├─vda1 | 252:1   | 0  | 1M   | 0  | part             |
-| └─vda2 | 252:2   | 0  | 18G  | 0  | part             |
-| vdb    | 252:16  | 0  | 20G  | 0  | disk             |
-| └─vdb1 | 252:17  | 0  | 20G  | 0  | part             |
-
-Проинициализируем и затем смонтируем подключенный диск
+## 34 теперь попробуйте выполнить команду create table t2(c1 integer); insert into t2 values (2);
 ```
-sudo mkdir -p /mnt/data
-sudo mount -o defaults /dev/vdb1 /mnt/data
+testdb=> create table t2(c1 integer);
+CREATE TABLE
+testdb=> insert into t2 values (2);
+INSERT 0 1
 ```
-Далее изменяем конфиг файл постгреса 
+## 35 а как так? нам же никто прав на создание таблиц и insert в них под ролью readonly?
+По умолчанию, для схемы public есть гранты на создание таблицы. Их надо забрать. 
+Если мы явно пропишем схему, получим ошибку
 ```
-data_directory = '/mnt/data/15/main'
+testdb=> create table testnm.t2(c1 integer);
+ERROR:  permission denied for schema testnm
+LINE 1: create table testnm.t2(c1 integer);
 ```
-Запускаем кластер
+## 36 есть идеи как убрать эти права? если нет - смотрите шпаргалку
+Надо забрать права на создание объектов из схемы пользователей.
+## 37 если вы справились сами то расскажите что сделали и почему, если смотрели шпаргалку - объясните что сделали и почему выполнив указанные в ней команды
 ```
-sudo -u postgres pg_ctlcluster 15 main start
+REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 ```
+из под postgres 
+## 38 теперь попробуйте выполнить команду create table t3(c1 integer); insert into t2 values (2);
+```
+testdb=> create table t4(t int);
+ERROR:  permission denied for schema public
+LINE 1: create table t4(t int);
+```
+## 39 расскажите что получилось и почему 
+Получили ошибку, поскольку ранее забрали права на создание объектов в схеме пользователей
