@@ -1,119 +1,133 @@
-## Настройте сервер так, чтобы в журнал сообщений сбрасывалась информация о блокировках, удерживаемых более 200 миллисекунд. Воспроизведите ситуацию, при которой в журнале появятся такие сообщения.
+## Настройте выполнение контрольной точки раз в 30 секунд.
 ```
-	ALTER SYSTEM SET log_lock_waits = on;
-	SELECT pg_reload_conf();
-	set deadlock_timeout='0.2s';
+sudo nano /etc/postgresql/15/main/postgresql.conf
+```
+Изменяем параметр.
+## 10 минут c помощью утилиты pgbench подавайте нагрузку.
+```
+sudo -u postgres pgbench -i postgres
+sudo -u postgres pgbench -P 1 -T 600 postgres
+```
+## Измерьте, какой объем журнальных файлов был сгенерирован за это время. Оцените, какой объем приходится в среднем на одну контрольную точку.
+```
+SELECT * FROM pg_ls_waldir() where cast(modification as date) = current_date
+```
+Всего создалось 26 файлов, общим объемом 436 мегабайт. 16,7 мегабайт на одну точку.
+```
+0000000100000001000000C9	16777216	2023-05-12 14:54:25.000 +0700
+0000000100000001000000CA	16777216	2023-05-12 14:54:55.000 +0700
+0000000100000001000000CB	16777216	2023-05-12 14:55:09.000 +0700
+0000000100000001000000CC	16777216	2023-05-12 14:55:40.000 +0700
+0000000100000001000000CE	16777216	2023-05-12 14:56:09.000 +0700
+0000000100000001000000CD	16777216	2023-05-12 14:56:38.000 +0700
+0000000100000001000000CF	16777216	2023-05-12 14:56:56.000 +0700
+0000000100000001000000D0	16777216	2023-05-12 14:57:16.000 +0700
+0000000100000001000000D1	16777216	2023-05-12 14:57:43.000 +0700
+0000000100000001000000D2	16777216	2023-05-12 14:58:10.000 +0700
+0000000100000001000000D4	16777216	2023-05-12 14:58:39.000 +0700
+0000000100000001000000D3	16777216	2023-05-12 14:59:08.000 +0700
+0000000100000001000000D5	16777216	2023-05-12 14:59:23.000 +0700
+0000000100000001000000D6	16777216	2023-05-12 14:59:45.000 +0700
+0000000100000001000000D7	16777216	2023-05-12 15:00:16.000 +0700
+0000000100000001000000D8	16777216	2023-05-12 15:00:43.000 +0700
+0000000100000001000000D9	16777216	2023-05-12 15:01:12.000 +0700
+0000000100000001000000DA	16777216	2023-05-12 15:01:40.000 +0700
+0000000100000001000000DB	16777216	2023-05-12 15:02:12.000 +0700
+0000000100000001000000DC	16777216	2023-05-12 15:02:40.000 +0700
+0000000100000001000000DD	16777216	2023-05-12 15:03:09.000 +0700
+0000000100000001000000DE	16777216	2023-05-12 15:03:39.000 +0700
+0000000100000001000000DF	16777216	2023-05-12 15:04:07.000 +0700
+0000000100000001000000E0	16777216	2023-05-12 15:04:22.000 +0700
+0000000100000001000000E1	16777216	2023-05-12 15:04:46.000 +0700
+000000010000000100000048	16777216	2023-05-12 15:06:12.000 +0700
+```
+## Проверьте данные статистики: все ли контрольные точки выполнялись точно по расписанию. Почему так произошло?
+
+Даже рассматривая статистику, полученную через запрос к pg_ls_waldir, видно, что контрольные точки выполнялись каждый 30 секунд. 
+Мы установили ранее значение параметра checkpoint_timeout. 
+
+## Сравните tps в синхронном/асинхронном режиме утилитой pgbench. Объясните полученный результат.
+```
+sudo -u postgres pgbench -P 1 -T 10 postgres
+tps = 360.061279 
+
+ALTER SYSTEM SET synchronous_commit = off;
+
+sudo pg_ctlcluster 15 main reload
+
+sudo -u postgres pgbench -P 1 -T 10 postgres
+tps = 2374.097985 
+```
+Видим многократное увеличие количество транзакций. При асинхронном режиме отсутствует ожидание локального сброса WAL на диск, поэтому может образоваться окно от момента, когда клиент узнаёт об успешном завершении,
+до момента, когда транзакция действительно гарантированно защищена от сбоя. В отличие от fsync, отключение этого параметра не угрожает целостности данных: 
+сбой операционной системы или базы данных может привести к потере последних транзакций, считавшихся зафиксированными, но состояние базы данных будет точно таким же, 
+как и в случае штатного прерывания этих транзакций. Поэтому выключение режима synchronous_commit может быть полезной альтернативой отключению fsync, когда производительность важнее, 
+чем надёжная гарантия сохранности каждой транзакции. 
 
 
-	CREATE TABLE accounts(
-	  acc_no integer PRIMARY KEY,
-	  amount numeric
-	);
-	INSERT INTO accounts VALUES (1,1000.00), (2,2000.00), (3,3000.00);
+## Создайте новый кластер с включенной контрольной суммой страниц. Создайте таблицу. Вставьте несколько значений. Выключите кластер. Измените пару байт в таблице. Включите кластер и сделайте выборку из таблицы. Что и почему произошло? как проигнорировать ошибку и продолжить работу?
+Зайдем под рутом
 ```
-	В 1-й сессии:
-```	
-	BEGIN;
-	UPDATE accounts SET amount = amount - 100.00 WHERE acc_no = 1;
+sudo su -
 ```
-	Во 2-й сессии:
-```	
-	BEGIN;
-	UPDATE accounts SET amount = amount - 100.00 WHERE acc_no = 1;
+Остановим кластер
 ```
-	Отстрелим первую сессию. UPDATE выполнен. 
+pg_ctlcluster 15 main stop
 ```
-	sudo tail -n 10 /var/log/postgresql/postgresql-15-main.log
-	2023-05-05 08:05:20.492 UTC [1290] postgres@postgres LOG:  process 1290 still waiting for ShareLock on transaction 62416 after 200.139 ms
-	2023-05-05 08:05:20.492 UTC [1290] postgres@postgres DETAIL:  Process holding the lock: 1322. Wait queue: 1290.
-	2023-05-05 08:05:20.492 UTC [1290] postgres@postgres CONTEXT:  while updating tuple (0,1) in relation "accounts"
-	2023-05-05 08:05:20.492 UTC [1290] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 1;
-	2023-05-05 08:05:32.163 UTC [1290] postgres@postgres LOG:  process 1290 acquired ShareLock on transaction 62416 after 11871.162 ms
-	2023-05-05 08:05:32.163 UTC [1290] postgres@postgres CONTEXT:  while updating tuple (0,1) in relation "accounts"
-	2023-05-05 08:05:32.163 UTC [1290] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 1;
+Проверим, что кластер остановился
 ```
+su - postgres -c '/usr/lib/postgresql/15/bin/pg_controldata -D "/var/lib/postgresql/15/main"' | grep state
+Database cluster state:               shut down
+```
+Запустим контрольную сумму
+```
+su - postgres -c '/usr/lib/postgresql/15/bin/pg_checksums --enable -D "/var/lib/postgresql/15/main"'
 
-## Смоделируйте ситуацию обновления одной и той же строки тремя командами UPDATE в разных сеансах. Изучите возникшие блокировки в представлении pg_locks и убедитесь, что все они понятны. Пришлите список блокировок и объясните, что значит каждая.
-  
-	Обновляем строку в 1-й сессии. Видим следующую картину. Мы удерживаем 1 строку в таблице.
-```	
-	1322	relation	accounts	RowExclusiveLock	true
-	1322	transactionid	62421	ExclusiveLock	true
+Checksum operation completed
+Files scanned:   970
+Blocks scanned:  63437
+Files written:  582
+Blocks written: 41713
+pg_checksums: syncing data directory
+pg_checksums: updating control file
+Checksums enabled in cluster
 ```
-	Обновляем во 2-й сессии ту же строку
-	Теперь мы видим, что помимо ожидания будущей блокировки строки , мы ожидаем завершения первой сессии. 
+Включим кластер
 ```
-	1419	relation	accounts	RowExclusiveLock	true
-	1419	tuple	accounts:12	ExclusiveLock	true
-	1419	transactionid	62421	ShareLock	false
-	1419	transactionid	62422	ExclusiveLock	true
-```	  
-	Обновляем в 3-й сессии ту же строку. Помимо нашей будущей блокировки, мы видим , что встали в очередь за блокировкой второй транзакции. Ожидая её завершения. 
+pg_ctlcluster 15 main start
 ```
-	1394	relation	accounts	RowExclusiveLock
-	1394	transactionid	62424	ExclusiveLock
-	1394	tuple	accounts:12	ExclusiveLock
+Проверим, что контрольная сумма страниц запущена
 ```
-	Фактически, мы получили очередь.
+su - postgres -c '/usr/lib/postgresql/15/bin/pg_controldata -D "/var/lib/postgresql/15/main" | grep checksum'
+Data page checksum version:           1
+```
+Создаем таблицу 
+```
+CREATE TABLE test1(i int);
+INSERT INTO test1 SELECT s.id FROM generate_series(1,100) AS s(id); 
 
-## Воспроизведите взаимоблокировку трех транзакций. Можно ли разобраться в ситуации постфактум, изучая журнал сообщений?
-При взаимоблокировки, мы получим сообщение такого типа
+SELECT pg_relation_filepath('test1');
+base/5/16651
+```
+Остановим кластер
+```
+pg_ctlcluster 15 main stop
+```
+Изменим пару байт в таблице
+```
+dd if=/dev/zero of=/var/lib/postgresql/15/main/base/5/16651 oflag=dsync conv=notrunc bs=1 count=8
 
+8+0 records in
+8+0 records out
+8 bytes copied, 0.0739624 s, 0.1 kB/s
 ```
-SQL Error [40P01]: ERROR: deadlock detected
-  Подробности: Process 1419 waits for ShareLock on transaction 62433; blocked by process 1322.
-Process 1322 waits for ShareLock on transaction 62434; blocked by process 1419.
-  Подсказка: See server log for query details.
-  Где: while updating tuple (0,25) in relation "accounts"
+При выполнении запроса на нашу таблицу, получаем ошибку - 
+```SQL Error [XX001]: ERROR: invalid page in block 0 of relation base/5/16651
+page verification failed, calculated checksum 11700 but expected 18741
 ```
-Проверим журнал сообщений.   
-```
-ychernov@qqq:~$ sudo tail -n 10 /var/log/postgresql/postgresql-15-main.log
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres DETAIL:  Process 5999 waits for ShareLock on transaction 62439; blocked by process 5998.
-        Process 5998 waits for ShareLock on transaction 62440; blocked by process 5999.
-        Process 5999: UPDATE accounts SET amount = amount + 10.00 WHERE acc_no = 1
-        Process 5998: UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 2
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres HINT:  See server log for query details.
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres CONTEXT:  while updating tuple (0,25) in relation "accounts"
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 10.00 WHERE acc_no = 1
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres LOG:  process 5998 acquired ShareLock on transaction 62440 after 8525.387 ms
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres CONTEXT:  while updating tuple (0,2) in relation "accounts"
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 2
-ychernov@qqq:~$ sudo tail -n 20 /var/log/postgresql/postgresql-15-main.log
-bash: line 1: HXzwpO: command not found
-2023-05-05 08:52:31.784 UTC [5998] postgres@postgres LOG:  process 5998 still waiting for ShareLock on transaction 62440 after 1000.120 ms
-2023-05-05 08:52:31.784 UTC [5998] postgres@postgres DETAIL:  Process holding the lock: 5999. Wait queue: 5998.
-2023-05-05 08:52:31.784 UTC [5998] postgres@postgres CONTEXT:  while updating tuple (0,2) in relation "accounts"
-2023-05-05 08:52:31.784 UTC [5998] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 2
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres LOG:  process 5999 detected deadlock while waiting for ShareLock on transaction 62439 after 1000.144 ms
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres DETAIL:  Process holding the lock: 5998. Wait queue: .
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres CONTEXT:  while updating tuple (0,25) in relation "accounts"
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 10.00 WHERE acc_no = 1
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres ERROR:  deadlock detected
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres DETAIL:  Process 5999 waits for ShareLock on transaction 62439; blocked by process 5998.
-        Process 5998 waits for ShareLock on transaction 62440; blocked by process 5999.
-        Process 5999: UPDATE accounts SET amount = amount + 10.00 WHERE acc_no = 1
-        Process 5998: UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 2
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres HINT:  See server log for query details.
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres CONTEXT:  while updating tuple (0,25) in relation "accounts"
-2023-05-05 08:52:39.309 UTC [5999] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 10.00 WHERE acc_no = 1
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres LOG:  process 5998 acquired ShareLock on transaction 62440 after 8525.387 ms
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres CONTEXT:  while updating tuple (0,2) in relation "accounts"
-2023-05-05 08:52:39.309 UTC [5998] postgres@postgres STATEMENT:  UPDATE accounts SET amount = amount + 100.00 WHERE acc_no = 2
-```
-Разобрав журнал, ситуацию можно исправить, поскольку можно отследить последовательность блокировок, которые привели к общему дедлоку. 	
-	
-## Могут ли две транзакции, выполняющие единственную команду UPDATE одной и той же таблицы (без where), заблокировать друг друга?
-	
-	Конечно, поскольку первый UPDATE будет удерживать строки всей таблицы, а вторая транзакция будет ожидать окончания первой. 
-```	
-	BEGIN;
-	UPDATE accounts SET amount = amount - 100.00
-
-	1322	relation	accounts	RowExclusiveLock
-	1322	transactionid	62425	ExclusiveLock
-	1419	relation	accounts	RowExclusiveLock
-	1419	transactionid	62426	ExclusiveLock
-	1419	transactionid	62425	ShareLock
-	1419	tuple	accounts:2	ExclusiveLock
-```
+Попытаемся починить таблицу. У нас есть несколько вариантов. 
+Изменение параметра ignore_checksum_failure = on
+позволит нам продолжить работу, в случае ошибки контрольной суммы. Однако, это может привести к сбою, или к другим неприятным поледствиям, но позволит не потерять все данные целиком. 
+Как только мы восстановим все, что нужно восстановить, чтобы избавиться от ошибок, мы можем использовать zero_damaged_pages = on для уничтожения всех поврежденных страниц
+Эта опция уничтожит данные , поэтому ее нужно включать ее с большой осторожностью.
+После восстановления возможности доступа к таблице рекомендуется сделать копию таблицы перед выключением zero_damaged_pages.
