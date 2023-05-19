@@ -1,133 +1,68 @@
-## Настройте выполнение контрольной точки раз в 30 секунд.
-```
-sudo nano /etc/postgresql/15/main/postgresql.conf
-```
-Изменяем параметр.
-## 10 минут c помощью утилиты pgbench подавайте нагрузку.
-```
-sudo -u postgres pgbench -i postgres
-sudo -u postgres pgbench -P 1 -T 600 postgres
-```
-## Измерьте, какой объем журнальных файлов был сгенерирован за это время. Оцените, какой объем приходится в среднем на одну контрольную точку.
-```
-SELECT * FROM pg_ls_waldir() where cast(modification as date) = current_date
-```
-Всего создалось 26 файлов, общим объемом 436 мегабайт. 16,7 мегабайт на одну точку.
-```
-0000000100000001000000C9	16777216	2023-05-12 14:54:25.000 +0700
-0000000100000001000000CA	16777216	2023-05-12 14:54:55.000 +0700
-0000000100000001000000CB	16777216	2023-05-12 14:55:09.000 +0700
-0000000100000001000000CC	16777216	2023-05-12 14:55:40.000 +0700
-0000000100000001000000CE	16777216	2023-05-12 14:56:09.000 +0700
-0000000100000001000000CD	16777216	2023-05-12 14:56:38.000 +0700
-0000000100000001000000CF	16777216	2023-05-12 14:56:56.000 +0700
-0000000100000001000000D0	16777216	2023-05-12 14:57:16.000 +0700
-0000000100000001000000D1	16777216	2023-05-12 14:57:43.000 +0700
-0000000100000001000000D2	16777216	2023-05-12 14:58:10.000 +0700
-0000000100000001000000D4	16777216	2023-05-12 14:58:39.000 +0700
-0000000100000001000000D3	16777216	2023-05-12 14:59:08.000 +0700
-0000000100000001000000D5	16777216	2023-05-12 14:59:23.000 +0700
-0000000100000001000000D6	16777216	2023-05-12 14:59:45.000 +0700
-0000000100000001000000D7	16777216	2023-05-12 15:00:16.000 +0700
-0000000100000001000000D8	16777216	2023-05-12 15:00:43.000 +0700
-0000000100000001000000D9	16777216	2023-05-12 15:01:12.000 +0700
-0000000100000001000000DA	16777216	2023-05-12 15:01:40.000 +0700
-0000000100000001000000DB	16777216	2023-05-12 15:02:12.000 +0700
-0000000100000001000000DC	16777216	2023-05-12 15:02:40.000 +0700
-0000000100000001000000DD	16777216	2023-05-12 15:03:09.000 +0700
-0000000100000001000000DE	16777216	2023-05-12 15:03:39.000 +0700
-0000000100000001000000DF	16777216	2023-05-12 15:04:07.000 +0700
-0000000100000001000000E0	16777216	2023-05-12 15:04:22.000 +0700
-0000000100000001000000E1	16777216	2023-05-12 15:04:46.000 +0700
-000000010000000100000048	16777216	2023-05-12 15:06:12.000 +0700
-```
-## Проверьте данные статистики: все ли контрольные точки выполнялись точно по расписанию. Почему так произошло?
+## развернуть виртуальную машину любым удобным способом
 
-Даже рассматривая статистику, полученную через запрос к pg_ls_waldir, видно, что контрольные точки выполнялись каждый 30 секунд. 
-Мы установили ранее значение параметра checkpoint_timeout. 
+Использую VDS
 
-## Сравните tps в синхронном/асинхронном режиме утилитой pgbench. Объясните полученный результат.
+## поставить на неё PostgreSQL 15 любым способом
 ```
-sudo -u postgres pgbench -P 1 -T 10 postgres
-tps = 360.061279 
+sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
+```
 
-ALTER SYSTEM SET synchronous_commit = off;
+## настроить кластер PostgreSQL 15 на максимальную производительность не обращая внимание на возможные проблемы с надежностью в случае аварийной перезагрузки виртуальной машины
+
+Отключим параметр synchronous_commit
+```
+sudo -u postgres psql -c "ALTER SYSTEM SET synchronous_commit = off;"
 
 sudo pg_ctlcluster 15 main reload
-
+```
+## нагрузить кластер через утилиту через утилиту pgbench (https://postgrespro.ru/docs/postgrespro/14/pgbench)
+```
+sudo -u postgres pgbench -i postgres
 sudo -u postgres pgbench -P 1 -T 10 postgres
-tps = 2374.097985 
-```
-Видим многократное увеличие количество транзакций. При асинхронном режиме отсутствует ожидание локального сброса WAL на диск, поэтому может образоваться окно от момента, когда клиент узнаёт об успешном завершении,
-до момента, когда транзакция действительно гарантированно защищена от сбоя. В отличие от fsync, отключение этого параметра не угрожает целостности данных: 
-сбой операционной системы или базы данных может привести к потере последних транзакций, считавшихся зафиксированными, но состояние базы данных будет точно таким же, 
-как и в случае штатного прерывания этих транзакций. Поэтому выключение режима synchronous_commit может быть полезной альтернативой отключению fsync, когда производительность важнее, 
-чем надёжная гарантия сохранности каждой транзакции. 
 
+tps = 1673.548143 (without initial connection time)
+```
 
-## Создайте новый кластер с включенной контрольной суммой страниц. Создайте таблицу. Вставьте несколько значений. Выключите кластер. Измените пару байт в таблице. Включите кластер и сделайте выборку из таблицы. Что и почему произошло? как проигнорировать ошибку и продолжить работу?
-Зайдем под рутом
-```
-sudo su -
-```
-Остановим кластер
-```
-pg_ctlcluster 15 main stop
-```
-Проверим, что кластер остановился
-```
-su - postgres -c '/usr/lib/postgresql/15/bin/pg_controldata -D "/var/lib/postgresql/15/main"' | grep state
-Database cluster state:               shut down
-```
-Запустим контрольную сумму
-```
-su - postgres -c '/usr/lib/postgresql/15/bin/pg_checksums --enable -D "/var/lib/postgresql/15/main"'
+## написать какого значения tps удалось достичь, показать какие параметры в какие значения устанавливали и почему
 
-Checksum operation completed
-Files scanned:   970
-Blocks scanned:  63437
-Files written:  582
-Blocks written: 41713
-pg_checksums: syncing data directory
-pg_checksums: updating control file
-Checksums enabled in cluster
+Достигли tps = 1673.548143, пробуем увеличить еще
+Используя параметры конфигурации моей системы - 2 Гб RAM, 1 ядро CPU, минимальное число соединений 20, подберем через утилиту PGTUNE оптимальный конфиг:
 ```
-Включим кластер
+max_connections = 20
+shared_buffers = 512MB
+effective_cache_size = 1536MB
+maintenance_work_mem = 128MB
+checkpoint_completion_target = 0.9
+wal_buffers = 16MB
+default_statistics_target = 100
+random_page_cost = 1.1
+effective_io_concurrency = 200
+work_mem = 13107kB
+min_wal_size = 2GB
+max_wal_size = 8GB
 ```
-pg_ctlcluster 15 main start
+К сожалению, достичь большого увеличения tps не удалось. 
 ```
-Проверим, что контрольная сумма страниц запущена
+tps = 1675.628033 (without initial connection time)
 ```
-su - postgres -c '/usr/lib/postgresql/15/bin/pg_controldata -D "/var/lib/postgresql/15/main" | grep checksum'
-Data page checksum version:           1
+## Задание со *: аналогично протестировать через утилиту https://github.com/Percona-Lab/sysbench-tpcc (требует установки https://github.com/akopytov/sysbench) 
 ```
-Создаем таблицу 
-```
-CREATE TABLE test1(i int);
-INSERT INTO test1 SELECT s.id FROM generate_series(1,100) AS s(id); 
+curl -s https://packagecloud.io/install/repositories/akopytov/sysbench/script.deb.sh | sudo bash
+sudo apt -y install sysbench
 
-SELECT pg_relation_filepath('test1');
-base/5/16651
-```
-Остановим кластер
-```
-pg_ctlcluster 15 main stop
-```
-Изменим пару байт в таблице
-```
-dd if=/dev/zero of=/var/lib/postgresql/15/main/base/5/16651 oflag=dsync conv=notrunc bs=1 count=8
+wget https://github.com/Percona-Lab/sysbench-tpcc/archive/refs/heads/master.zip
 
-8+0 records in
-8+0 records out
-8 bytes copied, 0.0739624 s, 0.1 kB/s
+./tpcc.lua --pgsql-user=postgres --pgsql-db=postgres --time=120 --threads=10 --report-interval=1 --tables=10 --scale=100 --use_fk=0 --trx_level=RC --pgsql-password=[PASSWORD] --db-driver=pgsql prepare
 ```
-При выполнении запроса на нашу таблицу, получаем ошибку - 
-```SQL Error [XX001]: ERROR: invalid page in block 0 of relation base/5/16651
-page verification failed, calculated checksum 11700 but expected 18741
+БД наполнилась почти 100 Гб данных. 
 ```
-Попытаемся починить таблицу. У нас есть несколько вариантов. 
-Изменение параметра ignore_checksum_failure = on
-позволит нам продолжить работу, в случае ошибки контрольной суммы. Однако, это может привести к сбою, или к другим неприятным поледствиям, но позволит не потерять все данные целиком. 
-Как только мы восстановим все, что нужно восстановить, чтобы избавиться от ошибок, мы можем использовать zero_damaged_pages = on для уничтожения всех поврежденных страниц
-Эта опция уничтожит данные , поэтому ее нужно включать ее с большой осторожностью.
-После восстановления возможности доступа к таблице рекомендуется сделать копию таблицы перед выключением zero_damaged_pages.
+./tpcc.lua --pgsql-user=postgres --pgsql-db=postgres --time=300 --threads=15 --report-interval=1 --tables=10 --scale=100 --pgsql-password=[PASSWORD] --db-driver=pgsql run
+
+./tpcc.lua --pgsql-user=postgres --pgsql-db=postgres --time=300 --threads=15 --report-interval=1 --tables=10 --scale=100 --pgsql-password=[PASSWORD] --db-driver=pgsql cleanup
+```
+
+Результаты после 3 часов работы sysbench-tpcc для PostgreSQL с параметрами по умолчанию
+TPS = 1800~
+
+Это однозначно непредельные значения оптимизации, можно добиться и больших цифр, однако надо иметь представление о задаче, которую будет решать наш будущий кластер. Поскольку специфика работы является основным ориентиром для оптимизации.
+Есть инструкции , которые больше подойдут для работы DWH хранилищ, там стараются оптимизировать процесс вставки, добавляя разные фичи, типо распределенных кластеров и тд. Совсем другой процесс оптимизации для создания OLTP базы. 
