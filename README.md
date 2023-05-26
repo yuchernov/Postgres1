@@ -1,50 +1,115 @@
-## Создаем ВМ/докер c ПГ.
-Использую VDS
-## Создаем БД, схему и в ней таблицу.
-```
-	CREATE DATABASE testdb;
-	
-	\c testdb
-	
-	create schema testnm;
+# На 1 ВМ создаем таблицы test для записи, test2 для запросов на чтение.
 
-	CREATE TABLE testnm.test(c1 TEXT);
-```
-## Заполним таблицы автосгенерированными 100 записями.
-```
-	INSERT INTO testnm.test(c1) SELECT 'noname' FROM generate_series(1,100);
-```
-## Под линукс пользователем Postgres создадим каталог для бэкапов
-```
-	sudo -u postgres mkdir /etc/postgresql/sql
-```
-## Сделаем логический бэкап используя утилиту COPY
-```
-	COPY (SELECT * FROM testnm.test) TO '/etc/postgresql/sql/test.copy';
-```
-## Восстановим в 2 таблицу данные из бэкапа.
-```
-	CREATE TABLE testnm.test1(c1 TEXT);
+	Установим 15 постгрес
+	```
+	sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
+	```
+	Создадим новую базу данных
+	```
+	create database testdb;
+	```
+	Откроем доступ к новой базе данных для других ВМ. Изменим параметры
+	```
+	sudo nano /etc/postgresql/15/main/pg_hba.conf
 
-	COPY testnm.test1 FROM '/etc/postgresql/sql/test.copy';
-```
-## Используя утилиту pg_dump создадим бэкап с оглавлением в кастомном сжатом формате 2 таблиц
-```
-	sudo -u postgres pg_dump -Fc -t testnm.test1 -t testnm.test testdb > /tmp/testdb.dump
-```
-## Используя утилиту pg_restore восстановим в новую БД только вторую таблицу!
-```
-	CREATE DATABASE testdb1;
+	sudo nano /etc/postgresql/15/main/postgresql.conf
+	```
+	На текущей машине создаим 2 таблицы.
+	```
+	\с testdb
 	
-	create schema testnm;
+	ALTER SYSTEM SET wal_level = logical;
+
+	CREATE TABLE test(
+	  acc_no integer,
+	  amount numeric
+	);
+
+	CREATE TABLE test2(
+	  acc_no integer,
+	  amount numeric
+	);
+	```
+	Перезапустим кластер
+
+# Создаем публикацию таблицы test и подписываемся на публикацию таблицы test2 с ВМ №2.
+	```
+	CREATE PUBLICATION test_pub FOR TABLE test;
+	\password pas123
+	```
+	Создадим подписку на test2 на 2 ВМ.
+	```
+	CREATE SUBSCRIPTION test_sub 
+	CONNECTION 'host=10.128.0.34 port=5432 user=postgres password=pas123 dbname=testdb' 
+	PUBLICATION test_pub1 WITH (copy_data = false);
+	```
+
+# На 2 ВМ создаем таблицы test2 для записи, test для запросов на чтение.
+
+	Откроем доступ к новой базе данных для других ВМ. Изменим параметры
+	```
+	sudo nano /etc/postgresql/15/main/pg_hba.conf
+
+	sudo nano /etc/postgresql/15/main/postgresql.conf
+	```
+	Переходим на 2 ВМ
+
+	Создадим новую базу данных
+	```
+	create database testdb;
+	```	
+	Создадим таблицы
+	```
+	CREATE TABLE test(
+	  acc_no integer,
+	  amount numeric
+	);	
 	
-	sudo -u postgres pg_restore -d testdb1 -t test1 testdb.dump
+	CREATE TABLE test2(
+	  acc_no integer,
+	  amount numeric
+	);	
 	
-	postgres=# \c testdb1
-	You are now connected to database "testdb1" as user "postgres".
-	testdb1=# select count(1) from testnm.test1;
-	 count
-	-------
-	   100
-	(1 row)
-```
+	ALTER SYSTEM SET wal_level = logical;
+	```
+	рестарт кластера.
+
+# Создаем публикацию таблицы test2 и подписываемся на публикацию таблицы test1 с ВМ №1.
+	```
+	CREATE PUBLICATION test_pub1 FOR TABLE test2;
+	\password pas123
+	
+	CREATE SUBSCRIPTION test_sub 
+	CONNECTION 'host=10.128.0.10 port=5432 user=postgres password=pas123 dbname=testdb' 
+	PUBLICATION test_pub WITH (copy_data = false);	
+	```
+# 3 ВМ использовать как реплику для чтения и бэкапов (подписаться на таблицы из ВМ №1 и №2 ).
+
+	Установим 15 постгрес
+	```
+	sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
+	```
+	Создадим новую базу данных
+	```
+	create database testdb;
+	```	
+	Создадим таблицы
+	```
+	CREATE TABLE test(
+	  acc_no integer,
+	  amount numeric
+	);	
+	
+	CREATE TABLE test2(
+	  acc_no integer,
+	  amount numeric
+	);	
+	
+	CREATE SUBSCRIPTION test_sub 
+	CONNECTION 'host=10.128.0.10 port=5432 user=postgres password=pas123 dbname=testdb' 
+	PUBLICATION test_pub WITH (copy_data = false);		
+
+	CREATE SUBSCRIPTION test_sub1
+	CONNECTION 'host=10.128.0.34 port=5432 user=postgres password=pas123 dbname=testdb' 
+	PUBLICATION test_pub1 WITH (copy_data = false);
+	```
