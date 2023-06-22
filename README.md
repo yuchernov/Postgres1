@@ -1,115 +1,56 @@
-# На 1 ВМ создаем таблицы test для записи, test2 для запросов на чтение.
+# Создать индекс к какой-либо из таблиц вашей БД
+Создадим таблицу, в которой будет содержаться информация о фильмах. Наполним данными
+```
+CREATE TABLE films (
+    code        char(5),
+    title       varchar(40),
+    did         integer,
+    date_prod   date,
+    kind        varchar(10)
+);
+insert into films (code,title,did,date_prod,kind) values ('WEST1','Unforgiven',1999,'1999-03-14','Western');
+insert into films (code,title,did,date_prod,kind) values ('WEST2','Unforgiven_2',2000,'2000-03-14','Western');
+insert into films (code,title,did,date_prod,kind) values ('DRAM1','Forgiven',2003,'2003-06-14','Drama');
+insert into films (code,title,did,date_prod,kind) values ('DRAM2','Forgive_2',2005,'2005-03-14','Drama');
+```
+Создадим индекс к полю code таблицы films
+```
+CREATE UNIQUE INDEX code_idx ON films (code);
+```
+Классческий индекс на основе B дерева. Используется во многих СУБД в качестве основого. Особенно популярен в OLTP системах. 
+Позволяет быстро изымать небольшие объемы данных из таблицы, как правило, 3-5% от объема данных. 
+В этом кейсе, будет максимально эффективным. 
 
-	Установим 15 постгрес
-	```
-	sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
-	```
-	Создадим новую базу данных
-	```
-	create database testdb;
-	```
-	Откроем доступ к новой базе данных для других ВМ. Изменим параметры
-	```
-	sudo nano /etc/postgresql/15/main/pg_hba.conf
+# Прислать текстом результат команды explain в которой используется данный индекс
+```
+select * from films where code = 'WEST1'
 
-	sudo nano /etc/postgresql/15/main/postgresql.conf
-	```
-	На текущей машине создаим 2 таблицы.
-	```
-	\с testdb
-	
-	ALTER SYSTEM SET wal_level = logical;
+Index Scan using code_idx on films  (cost=0.13..8.15 rows=1 width=32)
+  Index Cond: (code = 'WEST1'::bpchar)
+```
+# Реализовать индекс для полнотекстового поиска
+```
+CREATE INDEX pgcode_idx ON films USING GIN (to_tsvector('english', kind));
+```
+Данный индекс позволит нам осуществить полнотекстовый поиск по полю kind. В запросе это бы выглядело следующим образом:
+```
+SELECT code
+FROM films
+WHERE to_tsvector(kind) @@ to_tsquery('Drama');
+```
 
-	CREATE TABLE test(
-	  acc_no integer,
-	  amount numeric
-	);
+Индексы применяются для поиска вхождения в строку данных. Чем то похож на создание регулярных выражений. Пользователь задает определенную маску, формат. Пользователь с помощью данного индекса может предварительно разбивать текст документа
+на составляющие, затем приводить к нужному формату, и в конце концов осуществлять поиск. 
 
-	CREATE TABLE test2(
-	  acc_no integer,
-	  amount numeric
-	);
-	```
-	Перезапустим кластер
+# Реализовать индекс на часть таблицы или индекс на поле с функцией
+```
+CREATE INDEX title_low_idx ON films ((lower(title)));
+```
+Функциональные индексы позволяют нам применять различные встроенные функции ,непосредственно, перед извлечением данных. Например, используя lower , мы сможем избежать неточность выборки, в случае некорректного написания слова пользователем. 
 
-# Создаем публикацию таблицы test и подписываемся на публикацию таблицы test2 с ВМ №2.
-	```
-	CREATE PUBLICATION test_pub FOR TABLE test;
-	\password pas123
-	```
-	Создадим подписку на test2 на 2 ВМ.
-	```
-	CREATE SUBSCRIPTION test_sub 
-	CONNECTION 'host=10.128.0.34 port=5432 user=postgres password=pas123 dbname=testdb' 
-	PUBLICATION test_pub1 WITH (copy_data = false);
-	```
-
-# На 2 ВМ создаем таблицы test2 для записи, test для запросов на чтение.
-
-	Откроем доступ к новой базе данных для других ВМ. Изменим параметры
-	```
-	sudo nano /etc/postgresql/15/main/pg_hba.conf
-
-	sudo nano /etc/postgresql/15/main/postgresql.conf
-	```
-	Переходим на 2 ВМ
-
-	Создадим новую базу данных
-	```
-	create database testdb;
-	```	
-	Создадим таблицы
-	```
-	CREATE TABLE test(
-	  acc_no integer,
-	  amount numeric
-	);	
-	
-	CREATE TABLE test2(
-	  acc_no integer,
-	  amount numeric
-	);	
-	
-	ALTER SYSTEM SET wal_level = logical;
-	```
-	рестарт кластера.
-
-# Создаем публикацию таблицы test2 и подписываемся на публикацию таблицы test1 с ВМ №1.
-	```
-	CREATE PUBLICATION test_pub1 FOR TABLE test2;
-	\password pas123
-	
-	CREATE SUBSCRIPTION test_sub 
-	CONNECTION 'host=10.128.0.10 port=5432 user=postgres password=pas123 dbname=testdb' 
-	PUBLICATION test_pub WITH (copy_data = false);	
-	```
-# 3 ВМ использовать как реплику для чтения и бэкапов (подписаться на таблицы из ВМ №1 и №2 ).
-
-	Установим 15 постгрес
-	```
-	sudo apt update && sudo apt upgrade -y && sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list' && wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add - && sudo apt-get update && sudo apt-get -y install postgresql-15
-	```
-	Создадим новую базу данных
-	```
-	create database testdb;
-	```	
-	Создадим таблицы
-	```
-	CREATE TABLE test(
-	  acc_no integer,
-	  amount numeric
-	);	
-	
-	CREATE TABLE test2(
-	  acc_no integer,
-	  amount numeric
-	);	
-	
-	CREATE SUBSCRIPTION test_sub 
-	CONNECTION 'host=10.128.0.10 port=5432 user=postgres password=pas123 dbname=testdb' 
-	PUBLICATION test_pub WITH (copy_data = false);		
-
-	CREATE SUBSCRIPTION test_sub1
-	CONNECTION 'host=10.128.0.34 port=5432 user=postgres password=pas123 dbname=testdb' 
-	PUBLICATION test_pub1 WITH (copy_data = false);
-	```
+# Создать индекс на несколько полей
+```
+CREATE INDEX title_kind_idx ON films (code, kind);
+```
+Составные индексы, например, выгодно использовать когда в одной таблице есть пересекающиеся значения. Например, у нас в таблице есть id города, id товара. Id товара в каждом городе начинается с 1, тем самым, мы бы не смогли создать индекс 
+только по полю id товара, поскольку он бы не был уникальным, но, подвязав к id товара id города, мы успешно сможем использовать индексный доступ в этой таблице по id. 
