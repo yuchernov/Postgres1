@@ -1,0 +1,128 @@
+TABLE: CONTACTS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:8: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.CONTACTS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:13: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:14: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CONTACTS.txt:15: ERROR:  schema "ot" does not exist
+TABLE: COUNTRIES.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:5: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.COUNTRIES (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:5: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:6: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/COUNTRIES.txt:9: ERROR:  schema "ot" does not exist
+TABLE: CUSTOMERS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:7: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.CUSTOMERS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/CUSTOMERS.txt:12: ERROR:  schema "ot" does not exist
+TABLE: EMPLOYEES.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:10: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.EMPLOYEES (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:13: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:14: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:15: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:16: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:17: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:18: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:19: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/EMPLOYEES.txt:20: ERROR:  schema "ot" does not exist
+TABLE: INVENTORIES.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:5: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.INVENTORIES (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:5: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:6: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/INVENTORIES.txt:9: ERROR:  schema "ot" does not exist
+TABLE: LOCATIONS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:8: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.LOCATIONS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/LOCATIONS.txt:13: ERROR:  schema "ot" does not exist
+TABLE: ORDERS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:7: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.ORDERS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:13: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDERS.txt:14: ERROR:  schema "ot" does not exist
+TABLE: ORDER_ITEMS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:7: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.ORDER_ITEMS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/ORDER_ITEMS.txt:13: ERROR:  schema "ot" does not exist
+TABLE: PRODUCTS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:8: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.PRODUCTS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:9: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:10: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:11: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:12: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:13: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCTS.txt:14: ERROR:  schema "ot" does not exist
+TABLE: PRODUCT_CATEGORIES.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:4: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.PRODUCT_CATEGORIES (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:4: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:5: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:6: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/PRODUCT_CATEGORIES.txt:9: ERROR:  schema "ot" does not exist
+TABLE: REGIONS.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:4: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.REGIONS (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:4: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:5: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:6: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/REGIONS.txt:9: ERROR:  schema "ot" does not exist
+TABLE: WAREHOUSES.txt 
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:5: ERROR:  schema "ot" does not exist
+岩形世 1: CREATE TABLE IF NOT EXISTS OT.WAREHOUSES (
+                                  ^
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:5: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:6: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:7: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:8: ERROR:  schema "ot" does not exist
+psql:C:/Users/Yury/Desktop/SPOOL/REP/WAREHOUSES.txt:9: ERROR:  schema "ot" does not exist

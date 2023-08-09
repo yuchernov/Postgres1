@@ -1,0 +1,14 @@
+CREATE TABLE IF NOT EXISTS OT.ORDERS (
+ORDER_ID NUMERIC (22) DEFAULT nextval('OT.ISEQ$$_73088'),
+CUSTOMER_ID NUMERIC (6,0),
+STATUS VARCHAR (20),
+SALESMAN_ID NUMERIC (6,0),
+ORDER_DATE TIMESTAMP
+) tablespace SOGECAP; alter table OT.ORDERS owner to OT;
+alter table OT.ORDERS alter column ORDER_ID set NOT NULL;
+alter table OT.ORDERS alter column CUSTOMER_ID set NOT NULL;
+alter table OT.ORDERS alter column STATUS set NOT NULL;
+alter table OT.ORDERS alter column ORDER_DATE set NOT NULL;
+alter table OT.ORDERS add constraint SYS_C007462 primary key (ORDER_ID);
+CREATE UNIQUE INDEX IF NOT EXISTS SYS_C007462 on OT.ORDERS (ORDER_ID) TABLESPACE USERS;
+alter index OT.SYS_C007462 owner to OT;

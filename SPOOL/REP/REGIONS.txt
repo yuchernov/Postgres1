@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS OT.REGIONS (
+REGION_ID NUMERIC (22) DEFAULT nextval('OT.ISEQ$$_73062'),
+REGION_NAME VARCHAR (50)
+); alter table OT.REGIONS owner to OT;
+alter table OT.REGIONS alter column REGION_ID set NOT NULL;
+alter table OT.REGIONS alter column REGION_NAME set NOT NULL;
+alter table OT.REGIONS add constraint SYS_C007421 primary key (REGION_ID);
+CREATE UNIQUE INDEX IF NOT EXISTS SYS_C007421 on OT.REGIONS (REGION_ID);
+alter index OT.SYS_C007421 owner to OT;

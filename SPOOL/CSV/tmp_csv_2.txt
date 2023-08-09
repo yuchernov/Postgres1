@@ -1,0 +1,1 @@
+WAREHOUSE_ID||''||regexp_replace(regexp_replace(regexp_replace(WAREHOUSE_NAME,'(  *)',' '),chr(10),' '),chr(13),' ')||''||LOCATION_ID
