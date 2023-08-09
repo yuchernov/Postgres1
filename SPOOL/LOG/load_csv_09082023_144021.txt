@@ -1,3 +1,0 @@
-CONTACTS.txt 
-Не найден файл: C:\CSV\CONTACTS.CSV
-^C
