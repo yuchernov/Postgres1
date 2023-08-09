@@ -4,10 +4,10 @@
 
 ### Установка Oracle
 Сперва развернем Oracle на нашей локальной Windows машине. На официальном сайте представлена вся необходимая документации об установке Oracle под разные ОС. К сожалению, моя ранее созданная УЗ в Oracle была удалена. Также сейчас недоступна регистрация для граждан РФ и республики Беларусь. Пришлось регистрировать новую УЗ, используя VPN. Только после этого стала доступна ссылка на скачивание ознакомительной версии Oracle 19C под Windows. Oracle Database 19c for Microsoft Windows x64 (64-bit). Параметры при установке не меняю, использую стандартные.
-![](https://pandao.github.io/editor.md/examples/images/4.jpg)
+![](https://github.com/yuchernov/Postgres1/blob/main/SPOOL/1.jpg)
 После установки сервера, поднимем тестовый инстанс Oracle. Не забываем изменить пароль для УЗ system.
 Подключаемся к нашей БД:
-![](https://pandao.github.io/editor.md/examples/images/4.jpg)
+![](https://github.com/yuchernov/Postgres1/blob/main/SPOOL/2.jpg)
 После проверки работоспособности нашего инстанса, можем приступить к созданию тестовой структуры.
 ### Наполнение БД тестовыми данными
 Тестовые данные беру отсюда https://www.oracletutorial.com/getting-started/oracle-sample-database/. Выполним SQL скрипты для подготовки данных из sqlplus. Прикладываю также архив с sql файлами.
@@ -106,5 +106,5 @@ echo TABLE: %%i >> C:\Users\%username%\Desktop\SPOOL\LOG\add_tables_%logname%.tx
 )
 ```
 Зайдем в нашу БД, убедимся что таблицы были созданы.
-![](https://pandao.github.io/editor.md/examples/images/4.jpg)
+![](https://github.com/yuchernov/Postgres1/blob/main/SPOOL/3.jpg)
 Приступим к загрузке данных в таблицы. У нас есть два варианта - более простой и сложный. Простой заключается в том, что мы заранее помещаем CSV файлы с данными, сформированные на прошлом шаге, либо мы шарим эти файлы на windows машине с oracle и отдаем по сети. В данном описании я использую простой способ. Перемещаю CSV файлы на машину с postgres. 
