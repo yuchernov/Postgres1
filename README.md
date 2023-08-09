@@ -108,3 +108,8 @@ echo TABLE: %%i >> C:\Users\%username%\Desktop\SPOOL\LOG\add_tables_%logname%.tx
 Зайдем в нашу БД, убедимся что таблицы были созданы.
 ![](https://github.com/yuchernov/Postgres1/blob/main/SPOOL/3.jpg)
 Приступим к загрузке данных в таблицы. У нас есть два варианта - более простой и сложный. Простой заключается в том, что мы заранее помещаем CSV файлы с данными, сформированные на прошлом шаге, либо мы шарим эти файлы на windows машине с oracle и отдаем по сети. В данном описании я использую простой способ. Перемещаю CSV файлы на машину с postgres. 
+```
+COPY OT.CONTACTS FROM '/etc/postgresql/sql/Postgres1-main/SPOOL/CSV/CONTACTS.csv' WITH QUOTE E'\026' DELIMITER E'\007' CSV encoding 'windows1251' 
+```
+Проверим таблицу, убедимся, что данные загружены. 
+![](https://github.com/yuchernov/Postgres1/blob/main/SPOOL/4.jpg)
